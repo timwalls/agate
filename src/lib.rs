@@ -21,8 +21,8 @@ pub struct Server {
 }
 
 pub struct Request {
-    url: Url,
-    tls_stream: TlsStream<TcpStream>,
+    pub url: Url,
+    pub tls_stream: TlsStream<TcpStream>,
 }
 
 impl Server {

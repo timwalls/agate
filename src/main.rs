@@ -1,4 +1,5 @@
 use {
+    agate::{Server, Request, Result},
     async_std::{
         io::prelude::*,
         net::{TcpListener, TcpStream},
@@ -12,28 +13,11 @@ use {
     url::Url,
 };
 
-pub type Result<T=()> = std::result::Result<T, Box<dyn Error + Send + Sync>>;
-
 struct Args {
     sock_addr: String,
     content_dir: String,
     cert_file: String,
     key_file: String,
-}
-
-fn main() -> Result {
-    block_on(async {
-        let listener = TcpListener::bind(&ARGS.sock_addr).await?;
-        let mut incoming = listener.incoming();
-        while let Some(Ok(stream)) = incoming.next().await {
-            spawn(async {
-                if let Err(e) = connection(stream).await {
-                    eprintln!("Error: {:?}", e);
-                }
-            });
-        }
-        Ok(())
-    })
 }
 
 fn args() -> Option<Args> {
@@ -46,29 +30,28 @@ fn args() -> Option<Args> {
     })
 }
 
-static ARGS: Lazy<Args> =
-    Lazy::new(|| args().expect("usage: agate <addr:port> <dir> <cert> <key>"));
+fn main() -> Result {
+    let args = args().expect("usage: agate <addr:port> <dir> <cert> <key>");
 
-fn acceptor() -> Result<TlsAcceptor> {
-    use rustls::{ServerConfig, NoClientAuth, internal::pemfile::{certs, pkcs8_private_keys}};
-    use std::{io::BufReader, fs::File};
+    let cert = BufReader::new(File::open(&args.cert_file)?);
+    let key = BufReader::new(File::open(&args.key_file)?);
 
-    let cert_file = File::open(&ARGS.cert_file)?;
-    let certs = certs(&mut BufReader::new(cert_file)).or(Err("bad cert"))?;
-
-    let key_file = File::open(&ARGS.key_file)?;
-    let mut keys = pkcs8_private_keys(&mut BufReader::new(key_file)).or(Err("bad key"))?;
-
-    let mut config = ServerConfig::new(NoClientAuth::new());
-    config.set_single_cert(certs, keys.remove(0))?;
-    Ok(TlsAcceptor::from(Arc::new(config)))
+    block_on(async {
+        let server = Server::bind(args.sock_addr, cert, key).await?;
+        let mut incoming = listener.incoming();
+        while let Some(request) = incoming.next().await {
+            spawn(async {
+                if let Err(e) = connection(stream).await {
+                    eprintln!("Error: {:?}", e);
+                }
+            });
+        }
+        Ok(())
+    })
 }
 
 /// Handle a single client session (request + response).
 async fn connection(stream: TcpStream) -> Result {
-    static ACCEPTOR: Lazy<TlsAcceptor> = Lazy::new(|| acceptor().unwrap());
-
-    let mut stream = ACCEPTOR.accept(stream).await?;
     match parse_request(&mut stream).await {
         Ok(url) => {
             eprintln!("Got request for {:?}", url);
@@ -79,42 +62,6 @@ async fn connection(stream: TcpStream) -> Result {
             Err(e)
         }
     }
-}
-
-/// Return the URL requested by the client.
-async fn parse_request<R: Read + Unpin>(mut stream: R) -> Result<Url> {
-    // Because requests are limited to 1024 bytes (plus 2 bytes for CRLF), we
-    // can use a fixed-sized buffer on the stack, avoiding allocations and
-    // copying, and stopping bad clients from making us use too much memory.
-    let mut request = [0; 1026];
-    let mut buf = &mut request[..];
-    let mut len = 0;
-
-    // Read until CRLF, end-of-stream, or there's no buffer space left.
-    loop {
-        let bytes_read = stream.read(buf).await?;
-        len += bytes_read;
-        if request[..len].ends_with(b"\r\n") {
-            break;
-        } else if bytes_read == 0 {
-            Err("Request ended unexpectedly")?
-        }
-        buf = &mut request[len..];
-    }
-    let request = str::from_utf8(&request[..len - 2])?;
-
-    // Handle scheme-relative URLs.
-    let url = if request.starts_with("//") {
-        Url::parse(&format!("gemini:{}", request))?
-    } else {
-        Url::parse(request)?
-    };
-
-    // Validate the URL. TODO: Check the hostname and port.
-    if url.scheme() != "gemini" {
-        Err("unsupported URL scheme")?
-    }
-    Ok(url)
 }
 
 /// Send the client the file located at the requested URL.
