@@ -2,9 +2,10 @@ use {
     async_std::{
         io::prelude::*,
         net::{TcpListener, TcpStream, ToSocketAddrs},
+        task::spawn,
     },
     async_tls::{TlsAcceptor, server::TlsStream},
-    futures::stream::{Stream, TryStreamExt},
+    futures::Future,
     std::{
         error::Error,
         str,
@@ -36,15 +37,24 @@ impl Server {
         })
     }
 
-    pub fn incoming(&self) -> impl Stream<Item = Result<Request>> + '_ {
-        self.tcp_listener.incoming()
-            .map_err(|e| e.into())
-            .and_then(move |tcp_stream| self.handle_request(tcp_stream))
+    pub async fn serve<F, O>(&self, f: F)
+        where
+            F: Fn(Request) -> O + Send + Sync,
+            O: Future<Output = ()> + Send,
+    {
+        loop {
+            // TODO: Error logging?
+            if let Ok((tcp_stream, _)) = self.tcp_listener.accept().await {
+                spawn(async move {
+                    if let Ok(request) = self.read_request(tcp_stream).await {
+                        f(request).await
+                    }
+                });
+            }
+        }
     }
 
-    /// Return the URL requested by the client.
-    async fn handle_request(&self, tcp_stream: TcpStream) -> Result<Request> {
-        // TLS handshake.
+    async fn read_request(&self, tcp_stream: TcpStream) -> Result<Request> {
         let mut tls_stream = self.tls_acceptor.accept(tcp_stream).await?;
         match parse_url(&mut tls_stream).await {
             Ok(url) => Ok(Request { url, tls_stream }),
