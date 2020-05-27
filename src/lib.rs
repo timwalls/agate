@@ -37,31 +37,34 @@ impl Server {
         })
     }
 
-    pub async fn serve<F, O>(&self, f: F)
+    pub async fn serve<O>(self, f: fn(Request) -> O) -> !
         where
-            F: Fn(Request) -> O + Send + Sync,
-            O: Future<Output = ()> + Send,
+            O: Future<Output = ()> + Send + 'static,
     {
+        let Server { tcp_listener, tls_acceptor } = self;
+        let f = Arc::new(f);
         loop {
             // TODO: Error logging?
-            if let Ok((tcp_stream, _)) = self.tcp_listener.accept().await {
+            if let Ok((tcp_stream, _)) = tcp_listener.accept().await {
+                let tls_acceptor = tls_acceptor.clone();
+                let f = f.clone();
                 spawn(async move {
-                    if let Ok(request) = self.read_request(tcp_stream).await {
+                    if let Ok(request) = read_request(tls_acceptor, tcp_stream).await {
                         f(request).await
                     }
                 });
             }
         }
     }
+}
 
-    async fn read_request(&self, tcp_stream: TcpStream) -> Result<Request> {
-        let mut tls_stream = self.tls_acceptor.accept(tcp_stream).await?;
-        match parse_url(&mut tls_stream).await {
-            Ok(url) => Ok(Request { url, tls_stream }),
-            Err(e) => {
-                tls_stream.write_all(b"59 Invalid request.\r\n").await?;
-                Err(e)
-            }
+async fn read_request(tls_acceptor: TlsAcceptor, tcp_stream: TcpStream) -> Result<Request> {
+    let mut tls_stream = tls_acceptor.accept(tcp_stream).await?;
+    match parse_url(&mut tls_stream).await {
+        Ok(url) => Ok(Request { url, tls_stream }),
+        Err(e) => {
+            tls_stream.write_all(b"59 Invalid request.\r\n").await?;
+            Err(e)
         }
     }
 }

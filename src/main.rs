@@ -3,10 +3,14 @@ use {
     async_std::{
         io::prelude::*,
         path::PathBuf,
-        stream::StreamExt,
-        task::{block_on, spawn},
+        task::block_on,
     },
-    std::ffi::OsStr,
+    once_cell::sync::Lazy,
+    std::{
+        ffi::OsStr,
+        fs::File,
+        io::BufReader,
+    },
 };
 
 struct Args {
@@ -25,38 +29,34 @@ fn args() -> Option<Args> {
         key_file: args.next()?,
     })
 }
+const ARGS: Lazy<Args> = Lazy::new(|| args()
+    .expect("usage: agate <addr:port> <dir> <cert> <key>"));
 
 fn main() -> Result {
-    let args = args().expect("usage: agate <addr:port> <dir> <cert> <key>");
-
-    let cert = BufReader::new(File::open(&args.cert_file)?);
-    let key = BufReader::new(File::open(&args.key_file)?);
+    let cert = BufReader::new(File::open(&ARGS.cert_file)?);
+    let key = BufReader::new(File::open(&ARGS.key_file)?);
 
     block_on(async {
-        let server = Server::bind(args.sock_addr, cert, key).await?;
-        let mut incoming = server.incoming();
-        while let Some(request) = incoming.next().await {
-            if let Ok(request) = request {
-                spawn(async {
-                    if let Err(e) = send_response(request, &args.content_dir).await {
-                        eprintln!("{}", e);
-                    }
-                });
-            }
-        }
-        Ok(())
+        let server = Server::bind(&ARGS.sock_addr, cert, key).await?;
+        server.serve(handle_request).await
     })
+}
+
+async fn handle_request(request: Request) {
+    if let Err(e) = send_response(request, &ARGS.content_dir).await {
+        eprintln!("{}", e);
+    }
 }
 
 /// Send the client the file located at the requested URL.
 async fn send_response(request: Request, dir: &str) -> Result {
     let Request { url, mut tls_stream } = request;
     let mut path = PathBuf::from(dir);
-    if let Some(segments) = request.url.path_segments() {
+    if let Some(segments) = url.path_segments() {
         path.extend(segments);
     }
     if path.is_dir().await {
-        if request.url.as_str().ends_with('/') {
+        if url.as_str().ends_with('/') {
             path.push("index.gemini");
         } else {
             // Redirect to add a missing slash.
