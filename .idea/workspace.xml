@@ -16,7 +16,13 @@
         <item name="GROUP_NODE:origin" type="e8cecc67:BranchNodeDescriptor" />
       </path>
     </expand>
-    <select />
+    <select>
+      <path>
+        <item name="ROOT" type="e8cecc67:BranchNodeDescriptor" />
+        <item name="LOCAL_ROOT" type="e8cecc67:BranchNodeDescriptor" />
+        <item name="BRANCH:master" type="e8cecc67:BranchNodeDescriptor" />
+      </path>
+    </select>
   </component>
   <component name="CMakeRunConfigurationManager" shouldGenerate="true" shouldDeleteObsolete="true">
     <generated />
@@ -28,8 +34,8 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="3f7f0d57-4e68-4d21-bff0-cc42861503f5" name="Default Changelist" comment="">
-      <change afterPath="$PROJECT_DIR$/Dockerfile" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/index.gmi" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -97,8 +103,16 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1599660272669</updated>
-      <workItem from="1599660274052" duration="3444000" />
+      <workItem from="1599660274052" duration="6667000" />
     </task>
+    <task id="LOCAL-00001" summary="Working docker image">
+      <created>1599664214817</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1599664214818</updated>
+    </task>
+    <option name="localTasksCounter" value="2" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -109,11 +123,27 @@
       <map>
         <entry key="MAIN">
           <value>
-            <State />
+            <State>
+              <option name="FILTERS">
+                <map>
+                  <entry key="branch">
+                    <value>
+                      <list>
+                        <option value="master" />
+                      </list>
+                    </value>
+                  </entry>
+                </map>
+              </option>
+            </State>
           </value>
         </entry>
       </map>
     </option>
+  </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="Working docker image" />
+    <option name="LAST_COMMIT_MESSAGE" value="Working docker image" />
   </component>
   <component name="WindowStateProjectService">
     <state x="2182" y="772" width="1079" height="748" key="#com.intellij.execution.impl.EditConfigurationsDialog" timestamp="1599662835040">
@@ -124,9 +154,17 @@
       <screen x="66" y="23" width="3774" height="2137" />
     </state>
     <state x="2433" y="909" key="#com.intellij.fileTypes.FileTypeChooser/3840.1316.1920.1057/66.23.3774.2137@66.23.3774.2137" timestamp="1599661898842" />
+    <state x="2222" y="794" key="Vcs.Push.Dialog.v2" timestamp="1599664223869">
+      <screen x="64" y="23" width="3776" height="2137" />
+    </state>
+    <state x="2222" y="794" key="Vcs.Push.Dialog.v2/3840.1316.1920.1057/64.23.3776.2137@64.23.3776.2137" timestamp="1599664223869" />
     <state x="2605" y="1013" width="558" height="338" key="com.intellij.docker.deployment.ui.DockerPortBindingsField.v173.dialogSize" timestamp="1599662061998">
       <screen x="66" y="23" width="3774" height="2137" />
     </state>
     <state x="2605" y="1013" width="558" height="338" key="com.intellij.docker.deployment.ui.DockerPortBindingsField.v173.dialogSize/3840.1316.1920.1057/66.23.3774.2137@66.23.3774.2137" timestamp="1599662061998" />
+    <state x="1489" y="493" width="838" height="1032" key="search.everywhere.popup" timestamp="1599667483879">
+      <screen x="64" y="23" width="3776" height="2137" />
+    </state>
+    <state x="1489" y="493" width="838" height="1032" key="search.everywhere.popup/3840.1316.1920.1057/64.23.3776.2137@64.23.3776.2137" timestamp="1599667483879" />
   </component>
 </project>

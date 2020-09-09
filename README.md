@@ -2,44 +2,68 @@
 
 ## Simple Gemini server for static files
 
-Agate is a server for the [Gemini] network protocol, built with the [Rust] programming language. Agate has very few features, and can only serve static files. It uses async I/O, and should be quite efficient even when running on low-end hardware and serving many concurrent requests.
+Agate is a server for the [Gemini] network protocol, built with the [Rust] programming language.
+Agate has very few features, and can only serve static files. It uses async I/O, and should be quite efficient even when running on low-end hardware and serving many concurrent requests.
 
-## Learn more
+This is a fork of the original project developed by [mbrubeck], and packaged
+as a Docker container by [Tim Walls](https://snowgoons.ro/).
 
-* Home page: [gemini://gem.limpet.net/agate/][home]
-* [Cargo package][crates.io]
+## References
+
+* Original homepage: [gemini://gem.limpet.net/agate/][originalhome]
 * [Source code][source]
 
-## Installation and setup
+## What's in this image
 
-1. Download and unpack the [pre-compiled binary](https://github.com/mbrubeck/agate/releases).
+This image contains the basic `agate` server process, configured and ready
+to run.  The image looks for the following files:
 
-   Or, if you have the Rust toolchain installed, run `cargo install agate` to
-   install agate from crates.io.
+| Path | Content |
+| ---- | ------- |
+| `/usr/local/gemini/conf` | Your TLS certificate and key, as `gemini-cert.pem` and `gemini-key.rsa` |
+| `/usr/local/gemini/geminidocs` | Your static content to serve.  The 'default' file served is `index.gmi` |
 
-   Or download the source code and run `cargo build --release` inside the
-   source repository, then find the binary at `target/release/agate`.
+> *Important note:* A default - and likely expired - TLS certificate is included
+> in the image, just so you can get a server up and running with a simple
+> `docker run` command.  But you *must* replace this with your own certificate
+> before using in any kind of 'production', or anyone browsing your gemini
+> site will be confronted with certificate expired errors.
 
-2. Run `cargo install agate` to install agate from crates.io, or clone the [source], run `cargo build --release`, and then copy the compiled binary from `target/release/agate` to any location you want.  (You can also use `cargo run --release <args>` to run Agate from within the source directory.)
+The server exposes and listens on the 'standard' Gemini port, TCP:1965.
 
-3. Generate a self-signed TLS certificate and private key.  For example, if you have OpenSSL 1.1 installed, you can use a command like the following.  (Replace the hostname with the address of your Gemini server.)
+## Using the image with a Dockerfile in your own project
+Create a Dockerfile like so:
+```
+FROM snowgoons/agate:latest
+COPY ./geminidocs /usr/local/gemini/geminidocs
+COPY cert.pem /usr/local/gemini/conf/gemini-cert.pem
+COPY key.rsa  /usr/local/gemini/conf/gemini-key.rsa
+```
+
+Then build and run the Docker image:
 
 ```
-openssl req -x509 -newkey rsa:4096 -keyout key.rsa -out cert.pem \
-    -days 3650 -nodes -subj "/CN=example.com"
+docker build -t my-gemini-site .
+docker run -d --name my-gemini-server -p 1965:1965 my-gemini-site
 ```
 
-4. Run the server. The command line arguments are `agate <addr:port> <content_dir> <cert_file> <key_file>`.  For example, to listen on the standard Gemini port (1965) on all interfaces:
+You should be able to point your Gemini browser to gemini://localhost/ and see
+that it works.
 
+## Generating TLS keys
+Gemini works fine with self-signed TLS keys - so go ahead and generate your
+own using [openssl]:
+ 
 ```
-agate 0.0.0.0:1965 path/to/content/ cert.pem key.rsa
+openssl req -x509 -newkey rsa:4096 -keyout gemini-key.rsa -out gemini-cert.pem \
+    -days 3650 -nodes -subj "/CN=my-gemini-host.com"
 ```
 
-When a client requests the URL `gemini://example.com/foo/bar`, Agate will respond with the file at `path/to/content/foo/bar`.  If there is a directory at that path, Agate will look for a file named `index.gmi` inside that directory.
 
+
+[mbrubeck]: https://github.com/mbrubeck/
 [Gemini]: https://gemini.circumlunar.space/
 [Rust]: https://www.rust-lang.org/
-[home]: gemini://gem.limpet.net/agate/
-[rustup]: https://www.rust-lang.org/tools/install
-[source]: https://github.com/mbrubeck/agate
-[crates.io]: https://crates.io/crates/agate
+[originalhome]: gemini://gem.limpet.net/agate/
+[source]: https://github.com/timwalls/agate
+[openssl]: https://www.openssl.org/
