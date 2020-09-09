@@ -1,0 +1,4 @@
+# It worked!
+Congratulations, your agate server is running.
+
+Now add some content to `/usr/local/gemini/geminidocs`
